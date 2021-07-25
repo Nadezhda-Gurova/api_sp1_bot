@@ -70,7 +70,7 @@ def main():
     while True:
         try:
             current_status = get_homeworks(current_timestamp)
-            if len(current_status) > 0:
+            if len(current_status['homeworks']) > 0:
                 if current_status['homeworks'][0]['status'] == 'reviewing':
                     time.sleep(20 * 60)
                 else:
