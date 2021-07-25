@@ -71,7 +71,7 @@ def main():
         try:
             current_status = get_homeworks(current_timestamp)
             if current_status['homeworks'][0]['status'] == 'reviewing':
-                time.sleep(5 * 60)  # Опрашивать раз в пять минут
+                time.sleep(20 * 60)  # Опрашивать раз в пять минут
             else:
                 verdict = parse_homework_status(current_status['homeworks'][0])
                 send_message(verdict)
