@@ -92,7 +92,7 @@ def main():
 
     while True:
         try:
-            current_status = get_homeworks(0)
+            current_status = get_homeworks(current_timestamp)
             current_status_homework = current_status['homeworks']
             if len(current_status_homework) > 0:
                 if current_status_homework[0]['status'] == 'reviewing':
