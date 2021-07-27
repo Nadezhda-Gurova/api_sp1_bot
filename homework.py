@@ -10,9 +10,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+info_logger = logging.getLogger(__name__)
+info_logger.setLevel(logging.INFO)
+handler = RotatingFileHandler(
+    'my_logger.log', maxBytes=50000000, backupCount=5)
+info_logger.addHandler(handler)
+
 PRAKTIKUM_TOKEN = os.getenv('PRAKTIKUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
+logger_format = '%(asctime)s, %(levelname)s, %(name)s, %(message)s'
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
@@ -24,9 +32,22 @@ class TelegramHandler(logging.StreamHandler):
         send_message(msg)
 
 
+class JsonError(Exception):
+
+    def __init__(self, key) -> None:
+        super().__init__(f'В JSON нет ключа {key}')
+
+
 def parse_homework_status(homework):
-    homework_name = homework['homework_name']
-    if homework['status'] == 'rejected':
+    status = {'reviewing', 'approved', 'rejected'}
+    if 'homework_name' not in homework[0].keys():
+        raise JsonError('homework_name')
+    if 'status' not in homework[0].keys():
+        raise JsonError('status')
+    homework_name = homework[0]['homework_name']
+    if homework[0]['status'] not in status:
+        raise ValueError('Новый статус домашки')
+    if homework[0]['status'] == 'rejected':
         verdict = 'К сожалению, в работе нашлись ошибки.'
     else:
         verdict = 'Ревьюеру всё понравилось, работа зачтена!'
@@ -34,20 +55,21 @@ def parse_homework_status(homework):
 
 
 def get_homeworks(current_timestamp):
-    url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     payload = {'from_date': current_timestamp}
-    homework_statuses = requests.get(url, headers=headers, params=payload)
-    return homework_statuses.json()
+    try:
+        homework_statuses = requests.get(url, headers=headers, params=payload)
+        return homework_statuses.json()
+    except ConnectionError:
+        info_logger.exception('Нет связи с сервером')
 
 
 def send_message(message):
-    logging.info('Сообщение отправлено')
+    info_logger.info('Сообщение отправлено')
     return bot.send_message(CHAT_ID, message)
 
 
 def main():
-    logger_format = '%(asctime)s, %(levelname)s, %(name)s, %(message)s'
     current_timestamp = int(time.time())
 
     logging.basicConfig(
@@ -55,7 +77,8 @@ def main():
         filename='my_logger.log',
         format=logger_format
     )
-    logging.debug('Bot start')
+
+    info_logger.debug('Bot start')
 
     error_logger = logging.getLogger(__name__)
     error_logger.setLevel(logging.ERROR)
@@ -69,21 +92,20 @@ def main():
 
     while True:
         try:
-            current_status = get_homeworks(current_timestamp)
-            if len(current_status['homeworks']) > 0:
-                if current_status['homeworks'][0]['status'] == 'reviewing':
+            current_status = get_homeworks(0)
+            current_status_homework = current_status['homeworks']
+            if len(current_status_homework) > 0:
+                if current_status_homework[0]['status'] == 'reviewing':
                     time.sleep(20 * 60)
                 else:
-                    verdict = parse_homework_status(
-                        current_status['homeworks'][0])
+                    verdict = parse_homework_status(current_status_homework)
                     send_message(verdict)
                     break
             else:
                 time.sleep(20 * 60)
 
-        except Exception as e:
+        except Exception:
             error_logger.exception('Произошла ошибка')
-            print(f'Бот упал с ошибкой: {e}')
             time.sleep(5)
 
 
