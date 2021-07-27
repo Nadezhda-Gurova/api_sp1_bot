@@ -40,14 +40,14 @@ class JsonError(Exception):
 
 def parse_homework_status(homework):
     status = {'reviewing', 'approved', 'rejected'}
-    if 'homework_name' not in homework[0].keys():
+    if 'homework_name' not in homework.keys():
         raise JsonError('homework_name')
-    if 'status' not in homework[0].keys():
+    if 'status' not in homework.keys():
         raise JsonError('status')
-    homework_name = homework[0]['homework_name']
-    if homework[0]['status'] not in status:
+    homework_name = homework['homework_name']
+    if homework['status'] not in status:
         raise ValueError('Новый статус домашки')
-    if homework[0]['status'] == 'rejected':
+    if homework['status'] == 'rejected':
         verdict = 'К сожалению, в работе нашлись ошибки.'
     else:
         verdict = 'Ревьюеру всё понравилось, работа зачтена!'
