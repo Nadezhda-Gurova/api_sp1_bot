@@ -38,6 +38,17 @@ class TelegramHandler(logging.StreamHandler):
         send_message(msg)
 
 
+error_logger = logging.getLogger(__name__)
+error_logger.setLevel(logging.ERROR)
+handler = RotatingFileHandler('my_logger.log', maxBytes=50000000,
+                              backupCount=5)
+error_logger.addHandler(handler)
+telegram_handler = TelegramHandler()
+formatter = logging.Formatter(logger_format)
+telegram_handler.setFormatter(formatter)
+error_logger.addHandler(telegram_handler)
+
+
 class JsonError(Exception):
 
     def __init__(self, key) -> None:
@@ -78,17 +89,6 @@ def send_message(message):
 def main():
     current_timestamp = int(time.time())
     info_logger.debug('Bot start')
-
-    error_logger = logging.getLogger(__name__)
-    error_logger.setLevel(logging.ERROR)
-    handler = RotatingFileHandler('my_logger.log', maxBytes=50000000,
-                                  backupCount=5)
-    error_logger.addHandler(handler)
-    telegram_handler = TelegramHandler()
-    formatter = logging.Formatter(logger_format)
-    telegram_handler.setFormatter(formatter)
-    error_logger.addHandler(telegram_handler)
-
     while True:
         try:
             current_status = get_homeworks(current_timestamp)
