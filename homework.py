@@ -10,17 +10,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-info_logger = logging.getLogger(__name__)
-info_logger.setLevel(logging.INFO)
-handler = RotatingFileHandler(
-    'my_logger.log', maxBytes=50000000, backupCount=5)
-info_logger.addHandler(handler)
-
 PRAKTIKUM_TOKEN = os.getenv('PRAKTIKUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
 logger_format = '%(asctime)s, %(levelname)s, %(name)s, %(message)s'
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='my_logger.log',
+    format=logger_format
+)
+
+info_logger = logging.getLogger(__name__)
+info_logger.setLevel(logging.INFO)
+handler = RotatingFileHandler(
+    'my_logger.log', maxBytes=50000000, backupCount=5)
+info_logger.addHandler(handler)
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
@@ -40,9 +46,9 @@ class JsonError(Exception):
 
 def parse_homework_status(homework):
     status = {'reviewing', 'approved', 'rejected'}
-    if 'homework_name' not in homework.keys():
+    if 'homework_name' not in homework:
         raise JsonError('homework_name')
-    if 'status' not in homework.keys():
+    if 'status' not in homework:
         raise JsonError('status')
     homework_name = homework['homework_name']
     if homework['status'] not in status:
@@ -71,13 +77,6 @@ def send_message(message):
 
 def main():
     current_timestamp = int(time.time())
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        filename='my_logger.log',
-        format=logger_format
-    )
-
     info_logger.debug('Bot start')
 
     error_logger = logging.getLogger(__name__)
@@ -98,7 +97,7 @@ def main():
                 if current_status_homework[0]['status'] == 'reviewing':
                     time.sleep(20 * 60)
                 else:
-                    verdict = parse_homework_status(current_status_homework)
+                    verdict = parse_homework_status(current_status_homework[0])
                     send_message(verdict)
                     break
             else:
